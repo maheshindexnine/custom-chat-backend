@@ -53,24 +53,6 @@ export class UsersService {
       this.configService.get<string>('UPLOAD_DIR') ||
       'uploads/profile-pictures';
     this.ensureUploadDir();
-    // Initialize models using the factory function
-    // let tenantConnection;
-    // Try to get tenant connection from request (HTTP context)
-    // if (this.request && this.request.tenantConnection) {
-    //   tenantConnection = this.request.tenantConnection;
-    // } else {
-    //   // For WebSocket context, get from TenantService
-    //   tenantConnection = this.tenantService.getCurrentTenantConnection();
-    // }
-    // // console.log("======tenantConnection========>", tenantConnection);
-    // const models = createTenantModels(tenantConnection, {
-    //   userModel: this.userModel,
-    //   messageModel: this.messageModel,
-    //   groupModel: this.groupModel,
-    // });
-    // this.UserModel = models.UserModel;
-    // this.MessageModel = models.MessageModel;
-    // this.GroupModel = models.GroupModel;
   }
 
   private async ensureUploadDir() {
@@ -82,7 +64,6 @@ export class UsersService {
   }
 
   async create(createUserDto: CreateUserDto, request: any): Promise<User> {
-    console.log('createUserDto:', request.tenantConnection?.name);
     const createdUser = new this.userModel(createUserDto);
     return createdUser.save();
   }
@@ -192,7 +173,6 @@ export class UsersService {
     const lastMessageMap = new Map<string, any>();
 
     // Process direct messages
-    console.log(directMessages);
     for (const msg of directMessages) {
       if (Array.isArray(msg._id)) {
         for (const userId of msg._id) {
@@ -216,7 +196,6 @@ export class UsersService {
       .lean()
       .exec();
 
-    console.log(unreadMessages);
     // Count unread messages for each user and group
     for (const msg of unreadMessages) {
       if (msg.group) {
@@ -325,8 +304,6 @@ export class UsersService {
       userId: userId,
     }).exec();
 
-    console.log('Found user data:', allUserData);
-
     if (!allUserData) {
       return {
         status: false,
@@ -344,7 +321,6 @@ export class UsersService {
   async updateOnlineStatus(
     id: string,
     isOnline: boolean,
-    request: any,
   ): Promise<User | null> {
     const lastSeen = isOnline ? null : new Date();
     return this.userModel

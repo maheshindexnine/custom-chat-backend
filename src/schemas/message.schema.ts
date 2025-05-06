@@ -37,9 +37,6 @@ export class Message {
     size: number;
   };
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Tenant" })
-  tenant: Types.ObjectId;
-
   @Prop({ default: false })
   isDeleted: boolean;
 

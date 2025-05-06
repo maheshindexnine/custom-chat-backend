@@ -19,10 +19,6 @@ import { User } from '../schemas/user.schema';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express';
 
-interface CustomRequest extends Request {
-  tenantId?: string;
-}
-
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -60,8 +56,6 @@ export class UsersController {
     @Query('limit') limit: number,
     @Req() req: any,
   ): Promise<any> {
-    // req.tenantId = req.headers["x-tenant-id"] as string;
-
     const users = await this.usersService.findAllnew(page, limit, req);
     return {
       success: true,
@@ -100,7 +94,6 @@ export class UsersController {
         uploadType,
         req,
       );
-      console.log('========updatedUser========>', updatedUser);
       return {
         success: true,
         message: 'Profile picture updated successfully',

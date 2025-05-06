@@ -118,7 +118,6 @@ export class MessagesController {
     if (body.replyTo) {
       messageData.replyTo = body.replyTo;
     }
-    console.log('uploadfile-payload', messageData);
     const message = await this.messagesService.create(messageData, req);
 
     return message;

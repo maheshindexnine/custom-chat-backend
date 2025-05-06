@@ -17,28 +17,7 @@ export class MessagesService {
 
   constructor(
     @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
-    // @Optional() @Inject("REQUEST") private readonly request: any
-  ) {
-    // Initialize models using the factory function
-    // let tenantConnection;
-    // Try to get tenant connection from request (HTTP context)
-    // if (this.request && this.request.tenantConnection) {
-    //   tenantConnection = this.request.tenantConnection;
-    // } else {
-    //   // For WebSocket context, get from TenantService
-    // tenantConnection = this.tenantService.getCurrentTenantConnection();
-    // }
-    // console.log(
-    //   "======tenantConnection in MessagesService========>",
-    //   tenantConnection
-    // );
-    // const models = createTenantModels(tenantConnection, {
-    //   userModel: null,
-    //   messageModel: this.messageModel,
-    //   groupModel: null,
-    // });
-    // this.MessageModel = models.MessageModel;
-  }
+  ) {}
 
   async create(
     createMessageDto: CreateMessageDto,
@@ -46,8 +25,6 @@ export class MessagesService {
   ): Promise<Message> {
     const createdMessage = new this.messageModel(createMessageDto);
     const savedMessage = await createdMessage.save();
-
-    // ... existing code for socket notifications ...
 
     return savedMessage;
   }
@@ -59,13 +36,14 @@ export class MessagesService {
     skip = 0,
     request: any,
   ): Promise<Message[]> {
-    return this.messageModel.find({
-      $or: [
-        { sender: userId1, receiver: userId2 },
-        { sender: userId2, receiver: userId1 },
-      ],
-      group: null,
-    })
+    return this.messageModel
+      .find({
+        $or: [
+          { sender: userId1, receiver: userId2 },
+          { sender: userId2, receiver: userId1 },
+        ],
+        group: null,
+      })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -79,7 +57,8 @@ export class MessagesService {
     skip = 0,
     request: any,
   ): Promise<Message[]> {
-    return this.messageModel.find({ group: groupId })
+    return this.messageModel
+      .find({ group: groupId })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -88,11 +67,9 @@ export class MessagesService {
   }
 
   async markAsRead(messageId: string, request: any): Promise<Message | null> {
-    return this.messageModel.findByIdAndUpdate(
-      messageId,
-      { read: true },
-      { new: true },
-    ).exec();
+    return this.messageModel
+      .findByIdAndUpdate(messageId, { read: true }, { new: true })
+      .exec();
   }
 
   async softDelete(id: string, request: any) {
@@ -131,11 +108,8 @@ export class MessagesService {
     //   ...updateMessageDto,
     //   isEdited: true,
     // };
-    const updatedMessage = await this.messageModel.findByIdAndUpdate(
-      id,
-      updateMessageDto,
-      { new: true },
-    )
+    const updatedMessage = await this.messageModel
+      .findByIdAndUpdate(id, updateMessageDto, { new: true })
       .populate('sender')
       .populate('receiver')
       .exec();

@@ -11,32 +11,10 @@ export class GroupsService {
 
   constructor(
     @InjectModel(Group.name) private groupModel: Model<GroupDocument>,
-    // @Optional() @Inject("REQUEST") private readonly request: any
-  ) {
-    // Initialize models using the factory function
-    // let tenantConnection = null;
-    // Try to get tenant connection from request (HTTP context)
-    // if (this.request && this.request.tenantConnection) {
-    //   tenantConnection = this.request.tenantConnection;
-    // } else {
-    //   // For WebSocket context, get from TenantService
-    //   tenantConnection = this.tenantService.getCurrentTenantConnection();
-    // }
-    // console.log(
-    //   "======tenantConnection in GroupsService========>",
-    //   tenantConnection
-    // );
-    // const models = createTenantModels(tenantConnection, {
-    //   userModel: null,
-    //   messageModel: null,
-    //   groupModel: this.groupModel,
-    // });
-    // this.GroupModel = models.GroupModel;
-  }
+  ) {}
 
   async create(createGroupDto: CreateGroupDto, request: any): Promise<Group> {
     const createdGroup = new this.groupModel(createGroupDto);
-    console.log('createdGroup', createdGroup);
     return createdGroup.save();
   }
 
@@ -45,7 +23,6 @@ export class GroupsService {
   }
 
   async findOne(id: string, request: any): Promise<Group | null> {
-    // return this.groupModel.findById(id).populate('members').exec();
     return this.groupModel.findById(id).populate('members').exec();
   }
 

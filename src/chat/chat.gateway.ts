@@ -40,26 +40,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   async handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
     const userId = client.handshake.query.userId as string;
-    console.log(userId);
-
-    const tenantId = client.handshake.query['x-tenant-id'] as string;
-    console.log('tenantId:', tenantId);
-
-    // Store connection in socket data
-    const request = {
-      tenantId: tenantId,
-    };
-    client.data.tenantId = tenantId;
 
     if (!userId) {
-      // console.log("Client connected without userId, disconnecting");
       client.disconnect();
       return;
     }
-
-    // console.log(`Client connected: ${client.id}, userId: ${userId}`);
 
     // Store the mapping in both data structures
     this.userSocketMap.set(userId, client.id);
@@ -74,7 +60,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.join(`user:${userId}`);
 
     // Update online status in database
-    await this.usersService.updateOnlineStatus(userId, true, request);
+    await this.usersService.updateOnlineStatus(userId, true);
 
     // Broadcast user connected events
     this.server.emit('userConnected', userId);
@@ -85,23 +71,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   async handleDisconnect(client: Socket) {
-    console.log(`Client disconnected: ${client.id}`);
     const userId =
       this.socketUserMap.get(client.id) || this.socketUserMap2[client.id];
-    const tenantId = client.handshake.query['x-tenant-id'] as string;
-
-    // Store connection in socket data
-    const request = {
-      tenantId: tenantId,
-    };
-    client.data.tenantId = tenantId;
-
-    // Also store in TenantService for potential use in other contexts
-    // this.tenantService.setCurrentTenantConnection(tenantConnection);
 
     if (userId) {
-      // console.log(`Client disconnected: ${client.id}, userId: ${userId}`);
-
       // Remove from all mappings
       this.userSocketMap.delete(userId);
       this.socketUserMap.delete(client.id);
@@ -113,7 +86,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       try {
         // Update online status in database
-        await this.usersService.updateOnlineStatus(userId, false, request);
+        await this.usersService.updateOnlineStatus(userId, false);
       } catch (error) {
         console.error('Error updating offline status:', error);
       }
@@ -121,33 +94,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Broadcast user disconnected events
       this.server.emit('userDisconnected', userId);
       this.server.emit('userStatusChanged', { userId, isOnline: false });
-
-      // Clean up tenant connection for this socket
-      // if (this.tenantService) {
-      //   // this.tenantService.removeTenantConnectionForSocket(client.id);
-      // } else {
-      //   console.error("TenantService is not available");
-      // }
     }
   }
 
   @SubscribeMessage('sendMessage')
   async handleMessage(client: Socket, payload: any) {
     try {
-      console.log('Received message111:', payload);
-      // console.log("console20:", payload);
       let populatedMessage;
-
-      // Create a request-like object with the tenant connection
-      const request = {
-        tenantConnection: client.data.tenantConnection,
-        tenantId: client.data.tenantId,
-      };
 
       // Check if the message already has an ID (was already created during file upload)
       if (payload._id) {
-        // console.log("Message already exists with ID:", payload._id);
-
         // Get the populated message
         let messages;
         if (payload.group) {
@@ -155,7 +111,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             payload.group,
             1,
             0,
-            request,
+            {},
           );
         } else if (payload.receiver) {
           messages = await this.messagesService.findDirectMessages(
@@ -163,7 +119,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             payload.receiver,
             1,
             0,
-            request,
+            {},
           );
         }
         populatedMessage = messages[0];
@@ -179,10 +135,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             isForwarded: payload.isForwarded ?? false,
             replyTo: payload.replyTo ?? null,
           },
-          request,
+          {},
         );
-
-        console.log('Message created:', message);
 
         // Get the populated message
         let messages;
@@ -191,7 +145,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             payload.group,
             1,
             0,
-            request,
+            {},
           );
         } else if (payload.receiver) {
           messages = await this.messagesService.findDirectMessages(
@@ -199,7 +153,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             payload.receiver,
             1,
             0,
-            request,
+            {},
           );
         }
         populatedMessage = messages[0];
@@ -211,20 +165,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server
           .to(`group:${payload.group}`)
           .emit('newMessage', populatedMessage);
-        console.log('console8:', populatedMessage);
       } else if (payload.receiver) {
         // For direct messages, emit to the receiver
         const receiverSocketId = this.userSocketMap.get(payload.receiver);
         if (receiverSocketId) {
           this.server.to(receiverSocketId).emit('newMessage', populatedMessage);
-          console.log('console9:', populatedMessage);
         }
 
         // Only emit to the sender if they're not the same as the receiver
         // This prevents duplicate messages when sending to yourself
         if (client.id !== receiverSocketId) {
           client.emit('newMessage', populatedMessage);
-          // console.log("console10:", populatedMessage);
         }
       }
     } catch (error) {
@@ -245,10 +196,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('createGroup')
   async handleCreateGroup(client: Socket, payload: any) {
     const { name, members, createdBy } = payload;
-    const request = {
-      tenantConnection: client.data.tenantConnection,
-      tenantId: client.data.tenantId,
-    };
 
     const group = await this.groupsService.create(
       {
@@ -256,11 +203,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         members,
         createdBy,
       },
-      request,
+      {},
     );
 
     // Get the populated group - use _id instead of id
-    const populatedGroup = await this.groupsService.findOne(group._id, request);
+    const populatedGroup = await this.groupsService.findOne(group._id, {});
 
     // Notify all members about the new group
     members.forEach((memberId: string) => {
@@ -308,8 +255,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() messageId: string,
   ) {
-    // console.log("Marking message as read:", messageId);
-
     try {
       // Check if the messageId is a valid MongoDB ObjectId
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(messageId);
@@ -321,19 +266,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      const request = {
-        tenantConnection: client.data.tenantConnection,
-        tenantId: client.data.tenantId,
-      };
-
-      // if (client.data.tenantConnection) {
-      //   this.tenantService.setCurrentTenantConnection(
-      //     client.data.tenantConnection
-      //   );
-      // }
-
       // Mark the message as read
-      const message = await this.messagesService.markAsRead(messageId, request);
+      const message = await this.messagesService.markAsRead(messageId, {});
 
       if (message) {
         // Broadcast to all connected clients that the message has been read
@@ -351,16 +285,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: any,
   ) {
-    // console.log("Call offer received:", payload);
     const { to, from, offer, callType, isGroup } = payload;
-
-    console.log('Call offer received:', {
-      from: from,
-      to: to,
-      // offer: offer,
-      callType: callType,
-      isGroup: isGroup,
-    });
 
     if (isGroup) {
       // For group calls, broadcast to all members except the sender
@@ -390,10 +315,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: any,
   ) {
     const { to, from, answer } = payload;
-    console.log('Call answer received:', {
-      from: from,
-      to: to,
-    });
     const recipientSocketId = this.getUserSocketId(to);
     if (recipientSocketId) {
       this.server.to(recipientSocketId).emit('callAnswer', {
@@ -408,7 +329,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: any,
   ) {
-    console.log('ICE candidate received New:', payload);
     const { to, candidate } = payload;
 
     const recipientSocketId = this.getUserSocketId(to);
@@ -424,14 +344,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: any,
   ) {
-    console.log('Call ended:', payload);
     const { to, reason, isDecline, isGroup } = payload;
 
     // If this is a decline in a group call, only notify the original caller
     if (isDecline && isGroup) {
       const userId = this.socketUserMap.get(client.id);
-      console.log(`User ${userId} declined the group call`);
-
       // Only send the decline notification to the caller (to)
       const recipientSocketId = this.getUserSocketId(to);
       if (recipientSocketId) {
@@ -466,12 +383,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const { to, reason, isGroup } = payload;
 
-    console.log('Call rejected:', {
-      to: to,
-      reason: reason,
-      isGroup: isGroup,
-    });
-
     // For group calls, only notify the caller but with a special event
     if (isGroup) {
       const recipientSocketId = this.getUserSocketId(to);
@@ -498,11 +409,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: any,
   ) {
     const { to, from, stream, isGroup } = payload;
-    console.log('Screen share event received:', {
-      from: from,
-      to: to,
-      isGroup: isGroup,
-    });
 
     if (isGroup) {
       // For group calls
@@ -529,24 +435,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: any,
   ) {
     const { messageId, userId } = payload;
-    console.log(`Message ${messageId} deleted by user ${userId}`);
 
     try {
-      const request = {
-        tenantConnection: client.data.tenantConnection,
-        tenantId: client.data.tenantId,
-      };
-
       // Get the message to determine who should be notified
-      const message = await this.messagesService.findOne(messageId, request);
+      const message = await this.messagesService.findOne(messageId, {});
 
       if (message) {
         if (message.group) {
-          console.log('messageDeleted-group', {
-            groupId: message.group,
-            messageId: messageId,
-            userId: userId,
-          });
           // For group messages, notify all members
           this.server.to(`group:${message.group}`).emit('messageDeleted', {
             messageId,
@@ -560,12 +455,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           const receiverSocketId = this.getUserSocketId(
             message.receiver.toString(),
           );
-          console.log('messageDeleted', {
-            senderSocketId: senderSocketId,
-            receiverSocketId: receiverSocketId,
-            messageId: messageId,
-            userId: userId,
-          });
           if (senderSocketId) {
             this.server.to(senderSocketId).emit('messageDeleted', {
               messageId,
@@ -592,16 +481,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: any,
   ) {
     const { messageId, content, userId } = payload;
-    console.log(`Message ${messageId} edited by user ${userId}`);
 
     try {
-      const request = {
-        tenantConnection: client.data.tenantConnection,
-        tenantId: client.data.tenantId,
-      };
-
       // Get the message to determine who should be notified
-      const message = await this.messagesService.findOne(messageId, request);
+      const message = await this.messagesService.findOne(messageId, {});
 
       if (message) {
         if (message.group) {
