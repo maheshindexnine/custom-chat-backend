@@ -35,6 +35,9 @@ export class User {
   @Prop({ required: false })
   userId: number;
 
+  @Prop({ required: false, default: false })
+  isDeleted: boolean;
+
   @Prop({ type: Types.ObjectId, ref: 'Organization' })
   organizationId: Types.ObjectId;
 

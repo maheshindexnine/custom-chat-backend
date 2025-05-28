@@ -8,7 +8,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import mongoose, { Model } from 'mongoose';
+import mongoose, { connect, Model } from 'mongoose';
 import { User, UserDocument } from '../schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { GroupsService } from '../groups/groups.service';
@@ -81,9 +81,23 @@ export class UsersService {
     updateUserDto: UpdateUserDto,
     request: any,
   ): Promise<User | null> {
-    return this.UserModelInstance.findByIdAndUpdate(id, updateUserDto, {
-      new: true,
-    }).exec();
+    return this.userModel
+      .findByIdAndUpdate(id, updateUserDto, {
+        new: true,
+      })
+      .exec();
+  }
+
+  async deleteUser(id: string): Promise<User | null> {
+    return this.userModel
+      .findByIdAndUpdate(
+        id,
+        { isDeleted: true },
+        {
+          new: true,
+        },
+      )
+      .exec();
   }
 
   async findAll(request: any): Promise<User[]> {
@@ -102,6 +116,7 @@ export class UsersService {
         $match: {
           organizationId: new mongoose.Types.ObjectId(organizationId),
           _id: { $ne: new mongoose.Types.ObjectId(userId) },
+          isDeleted: false,
         },
       },
       { $addFields: { type: 'user' } },
@@ -109,7 +124,10 @@ export class UsersService {
 
     const groups = await this.groupModel.aggregate([
       {
-        $match: { organizationId: new mongoose.Types.ObjectId(organizationId) },
+        $match: {
+          organizationId: new mongoose.Types.ObjectId(organizationId),
+          isDeleted: false,
+        },
       },
       { $addFields: { type: 'group' } },
       {
@@ -128,6 +146,34 @@ export class UsersService {
     });
 
     return combined.slice(skip, skip + limit);
+  }
+
+  async findAllByAdmin(request: any): Promise<User[]> {
+    const page = parseInt(request.query.page) || 1;
+    const limit = parseInt(request.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const organizationId = request.user?.organizationId;
+    const userId = request.user?.userId;
+
+    if (!organizationId) {
+      throw new UnauthorizedException('Organization ID is required');
+    }
+
+    return this.userModel.aggregate([
+      {
+        $match: {
+          organizationId: new mongoose.Types.ObjectId(organizationId),
+          _id: { $ne: new mongoose.Types.ObjectId(userId) },
+          isDeleted: false,
+        },
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $skip: skip,
+      },
+    ]);
   }
 
   async connect(connectUserDto: ConnectUserDto): Promise<ConnectUserResponse> {

@@ -16,6 +16,7 @@ import {
   Patch,
   Delete,
   Request,
+  Put,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -33,7 +34,7 @@ interface UserResponse extends Omit<User, 'token'> {
   token: string;
 }
 
-@Controller('users')
+@Controller('api/v1/users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -59,6 +60,12 @@ export class UsersController {
   @Get()
   async findAll(@Req() req: Request): Promise<User[]> {
     return await this.usersService.findAll(req);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/admin')
+  async findAllByAdmin(@Req() req: Request): Promise<User[]> {
+    return await this.usersService.findAllByAdmin(req);
   }
 
   @Get('get-user')
@@ -134,7 +141,7 @@ export class UsersController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Patch(':id')
+  @Put(':id')
   update(
     @Param('id') id: string,
     @Body() updateUserDto: Partial<CreateUserDto>,
@@ -143,9 +150,9 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto, req);
   }
 
-  // @UseGuards(JwtAuthGuard)
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.usersService.remove(id);
-  // }
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.usersService.deleteUser(id);
+  }
 }
