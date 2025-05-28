@@ -6,6 +6,8 @@ import {
   IsInt,
   Min,
   IsEnum,
+  IsBoolean,
+  IsMongoId,
 } from 'class-validator';
 import { Exclude } from 'class-transformer';
 
@@ -34,4 +36,12 @@ export class CreateUserDto {
   @IsOptional()
   @IsEnum(['user', 'admin', 'vendor'])
   type?: 'user' | 'admin' | 'vendor';
+
+  @IsOptional()
+  @IsMongoId()
+  organizationId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isOnline?: boolean;
 }

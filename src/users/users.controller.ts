@@ -12,17 +12,32 @@ import {
   MaxFileSizeValidator,
   BadRequestException,
   Req,
+  UseGuards,
+  Patch,
+  Delete,
+  Request,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from '../schemas/user.schema';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Request } from 'express';
+import { ConnectUserDto } from './dto/connect-user-dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+export class ConnectUserResponse {
+  name: string;
+  token: string;
+}
+
+interface UserResponse extends Omit<User, 'token'> {
+  token: string;
+}
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  // get the orgId from jwt token normal user get Id and for admin get orgId form org module - next task
   @Post()
   async create(
     @Body() createUserDto: CreateUserDto,
@@ -40,6 +55,7 @@ export class UsersController {
     return user;
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get()
   async findAll(@Req() req: Request): Promise<User[]> {
     return await this.usersService.findAll(req);
@@ -64,9 +80,20 @@ export class UsersController {
     };
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
-  async findOne(@Param('id') id: string, @Req() req: any): Promise<User | null> {
+  async findOne(
+    @Param('id') id: string,
+    @Req() req: any,
+  ): Promise<User | null> {
     return await this.usersService.findOne(id, req);
+  }
+
+  @Post('connect')
+  async connect(
+    @Body() connectUserDto: ConnectUserDto,
+  ): Promise<ConnectUserResponse> {
+    return await this.usersService.connect(connectUserDto);
   }
 
   @Post(':id/:type/profile-picture')
@@ -105,4 +132,20 @@ export class UsersController {
       throw new BadRequestException(error.message);
     }
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Body() updateUserDto: Partial<CreateUserDto>,
+    @Request() req,
+  ) {
+    return this.usersService.update(id, updateUserDto, req);
+  }
+
+  // @UseGuards(JwtAuthGuard)
+  // @Delete(':id')
+  // remove(@Param('id') id: string) {
+  //   return this.usersService.remove(id);
+  // }
 }

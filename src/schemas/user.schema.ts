@@ -11,13 +11,13 @@ export class User {
   @Prop({ required: false })
   name: string;
 
-  @Prop()
+  @Prop({ required: false, default: '' })
   profileImage?: string;
 
-  @Prop()
+  @Prop({ required: false, default: false })
   isOnline: boolean;
 
-  @Prop()
+  @Prop({ default: Date.now, required: false })
   lastSeen: Date;
 
   @Prop({ required: false })
@@ -27,6 +27,9 @@ export class User {
   mobile: string;
 
   @Prop({ required: false })
+  password: string;
+
+  @Prop({ required: false, default: true })
   status: string;
 
   @Prop({ required: false })

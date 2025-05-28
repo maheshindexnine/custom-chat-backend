@@ -8,7 +8,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { User, UserDocument } from '../schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { GroupsService } from '../groups/groups.service';
@@ -20,6 +20,9 @@ import * as fs from 'fs/promises';
 import * as sharp from 'sharp';
 import * as path from 'path';
 import { OrganizationsService } from '../organizations/organizations.service';
+import { AuthJwtService } from '../auth/jwt.service';
+import { ConnectUserDto } from './dto/connect-user-dto';
+import { ConnectUserResponse } from './users.controller';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 interface ListResponse {
@@ -48,6 +51,7 @@ export class UsersService {
     @InjectModel(Group.name) private groupModel: Model<GroupDocument>,
     private configService: ConfigService,
     private organizationsService: OrganizationsService,
+    private authJwtService: AuthJwtService,
   ) {
     this.uploadDir =
       this.configService.get<string>('UPLOAD_DIR') ||
@@ -66,6 +70,7 @@ export class UsersService {
   async create(createUserDto: CreateUserDto): Promise<User> {
     const createdUser = new this.userModel({
       ...createUserDto,
+      organizationId: new mongoose.Types.ObjectId(createUserDto.organizationId),
     });
 
     return createdUser.save();
@@ -85,12 +90,27 @@ export class UsersService {
     const page = parseInt(request.query.page) || 1;
     const limit = parseInt(request.query.limit) || 10;
     const skip = (page - 1) * limit;
+    const organizationId = request.user?.organizationId;
+    const userId = request.user?.userId;
+
+    if (!organizationId) {
+      throw new UnauthorizedException('Organization ID is required');
+    }
 
     const users = await this.userModel.aggregate([
+      {
+        $match: {
+          organizationId: new mongoose.Types.ObjectId(organizationId),
+          _id: { $ne: new mongoose.Types.ObjectId(userId) },
+        },
+      },
       { $addFields: { type: 'user' } },
     ]);
 
     const groups = await this.groupModel.aggregate([
+      {
+        $match: { organizationId: new mongoose.Types.ObjectId(organizationId) },
+      },
       { $addFields: { type: 'group' } },
       {
         $lookup: {
@@ -108,6 +128,30 @@ export class UsersService {
     });
 
     return combined.slice(skip, skip + limit);
+  }
+
+  async connect(connectUserDto: ConnectUserDto): Promise<ConnectUserResponse> {
+    const user = await this.userModel
+      .findOne({
+        email: connectUserDto.email,
+        password: connectUserDto.password,
+      })
+      .exec();
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const token = this.authJwtService.generateToken({
+      userId: user._id.toString(),
+      email: user.email,
+      organizationId: user.organizationId.toString(),
+      name: user.name,
+    });
+
+    return {
+      name: user.name,
+      token,
+    };
   }
 
   async findAllnew(

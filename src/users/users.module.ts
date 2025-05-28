@@ -7,6 +7,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Message, MessageSchema } from 'src/schemas/message.schema';
 import { Group, GroupSchema } from 'src/schemas/group.schema';
 import { OrganizationsModule } from '../organizations/organizations.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { OrganizationsModule } from '../organizations/organizations.module';
     ]),
     GroupsModule,
     forwardRef(() => OrganizationsModule),
+    AuthModule,
   ],
   providers: [UsersService],
   controllers: [UsersController],

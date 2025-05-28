@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Organization } from '../schemas/organization.schema';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UsersService } from '../users/users.service';
+import { CreateUserDto } from 'src/users/dto/create-user.dto';
 
 @Injectable()
 export class OrganizationsService {
@@ -23,7 +29,6 @@ export class OrganizationsService {
       imageUrl: createOrganizationDto?.imageUrl,
     };
     const createdOrganization = new this.organizationModel(payload);
-    console.log(createdOrganization, ' payload');
     if (createdOrganization?._id) {
       const userPayload = {
         name: createOrganizationDto.name,
@@ -34,9 +39,7 @@ export class OrganizationsService {
         phone: createOrganizationDto.phone,
         organizationId: createdOrganization._id,
       };
-      // call create user api
-      const user = await this.userService.create(userPayload);
-      console.log(user, ' user');
+      await this.userService.create(userPayload as CreateUserDto);
     }
     return createdOrganization.save();
   }
