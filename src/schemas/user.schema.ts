@@ -1,6 +1,6 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
-import { Schema as MongooseSchema } from "mongoose";
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document, Types } from 'mongoose';
+import { Schema as MongooseSchema } from 'mongoose';
 
 export type UserDocument = User & Document;
 
@@ -27,16 +27,16 @@ export class User {
   mobile: string;
 
   @Prop({ required: false })
-  roles: string[];
-
-  @Prop({ required: false })
   status: string;
 
   @Prop({ required: false })
   userId: number;
 
-  @Prop({ required: false })
-  vId: number;
+  @Prop({ type: Types.ObjectId, ref: 'Organization' })
+  organizationId: Types.ObjectId;
+
+  @Prop({ required: true, enum: ['admin', 'user', 'vendor'] })
+  type: 'admin' | 'user' | 'vendor';
 
   @Prop({ default: Date.now })
   createdAt: Date;

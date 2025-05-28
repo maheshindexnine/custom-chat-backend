@@ -1,19 +1,37 @@
-export class CreateUserDto {
-  readonly name: string;
-  readonly email: string;
-  readonly mobile: string;
-  readonly vId: string;
-  readonly storeIds: string[];
-  readonly roles: string[];
-  readonly status: string;
-}
+import {
+  IsString,
+  IsNotEmpty,
+  IsEmail,
+  IsOptional,
+  IsInt,
+  Min,
+  IsEnum,
+} from 'class-validator';
+import { Exclude } from 'class-transformer';
 
-export class UpdateUserDto {
-  readonly name: string;
-  readonly email: string;
-  readonly mobile: string;
-  readonly vId: string;
-  readonly storeIds: string[];
-  readonly roles: string[];
-  readonly status: string;
+export class CreateUserDto {
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsEmail()
+  email: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  age?: number;
+
+  @IsString()
+  @IsNotEmpty()
+  // @Exclude()
+  password: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsEnum(['user', 'admin', 'vendor'])
+  type?: 'user' | 'admin' | 'vendor';
 }

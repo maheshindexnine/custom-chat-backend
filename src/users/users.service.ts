@@ -10,7 +10,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../schemas/user.schema';
-import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 import { GroupsService } from '../groups/groups.service';
 import { Message, MessageDocument } from '../schemas/message.schema';
 import { Request } from 'express';
@@ -19,13 +19,14 @@ import { Group, GroupDocument } from '../schemas/group.schema';
 import * as fs from 'fs/promises';
 import * as sharp from 'sharp';
 import * as path from 'path';
+import { OrganizationsService } from '../organizations/organizations.service';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 interface ListResponse {
   _id: string;
   name: string;
   type: 'user' | 'group';
   profileImage: string;
-  backgroundColor: string;
   lastSeen?: Date;
   isOnline?: boolean;
   totalMembers?: number;
@@ -45,9 +46,8 @@ export class UsersService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
     @InjectModel(Group.name) private groupModel: Model<GroupDocument>,
-    // private groupService: GroupsService,
     private configService: ConfigService,
-    // @Optional() @Inject("REQUEST") private readonly request: any
+    private organizationsService: OrganizationsService,
   ) {
     this.uploadDir =
       this.configService.get<string>('UPLOAD_DIR') ||
@@ -63,8 +63,11 @@ export class UsersService {
     }
   }
 
-  async create(createUserDto: CreateUserDto, request: any): Promise<User> {
-    const createdUser = new this.userModel(createUserDto);
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    const createdUser = new this.userModel({
+      ...createUserDto,
+    });
+
     return createdUser.save();
   }
 
@@ -228,12 +231,9 @@ export class UsersService {
         type: 'user',
         email: user.email,
         mobile: user.mobile,
-        roles: user.roles,
         profileImage: user.profileImage
           ? `${process.env.WEBSITE_URL}/${user.profileImage}`
           : '',
-        backgroundColor:
-          backgroundColors[Math.floor(Math.random() * backgroundColors.length)],
         lastSeen: user.lastSeen,
         isOnline: user.isOnline,
         lastMessageAt: userInteractionMap.get(userId) || new Date(0),
@@ -251,8 +251,6 @@ export class UsersService {
         profileImage: group.profileImage
           ? `${process.env.WEBSITE_URL}/${group.profileImage}`
           : '',
-        backgroundColor:
-          backgroundColors[Math.floor(Math.random() * backgroundColors.length)],
         totalMembers: group.members?.length || 0,
         members: group.members,
         lastMessageAt: groupInteractionMap.get(groupId) || new Date(0),

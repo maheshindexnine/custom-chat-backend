@@ -6,6 +6,7 @@ import { User, UserSchema } from 'src/schemas/user.schema';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Message, MessageSchema } from 'src/schemas/message.schema';
 import { Group, GroupSchema } from 'src/schemas/group.schema';
+import { OrganizationsModule } from '../organizations/organizations.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { Group, GroupSchema } from 'src/schemas/group.schema';
       { name: Group.name, schema: GroupSchema },
     ]),
     GroupsModule,
+    forwardRef(() => OrganizationsModule),
   ],
   providers: [UsersService],
   controllers: [UsersController],

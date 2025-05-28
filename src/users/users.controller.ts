@@ -36,7 +36,7 @@ export class UsersController {
       return checkUser;
     }
 
-    const user = await this.usersService.create(createUserDto, request);
+    const user = await this.usersService.create(createUserDto);
     return user;
   }
 
