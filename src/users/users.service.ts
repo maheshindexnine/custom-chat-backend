@@ -72,7 +72,6 @@ export class UsersService {
       ...createUserDto,
       organizationId: new mongoose.Types.ObjectId(createUserDto.organizationId),
     });
-
     return createdUser.save();
   }
 
@@ -174,6 +173,30 @@ export class UsersService {
         $skip: skip,
       },
     ]);
+  }
+
+  async adminLogin(loginDto: ConnectUserDto): Promise<any> {
+    const user = await this.userModel
+      .findOne({
+        email: loginDto.email,
+        password: loginDto.password,
+      })
+      .exec();
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const token = this.authJwtService.generateToken({
+      userId: user._id.toString(),
+      email: user.email,
+      organizationId: user.organizationId.toString(),
+      name: user.name,
+    });
+
+    return {
+      name: user.name,
+      token,
+    };
   }
 
   async connect(connectUserDto: ConnectUserDto): Promise<ConnectUserResponse> {

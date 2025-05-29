@@ -15,6 +15,5 @@ export class ConnectUserDto {
 
   @IsString()
   @IsNotEmpty()
-  // @Exclude()
   password: string;
 }

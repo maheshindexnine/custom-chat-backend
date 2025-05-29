@@ -39,6 +39,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   // get the orgId from jwt token normal user get Id and for admin get orgId form org module - next task
+  @UseGuards(JwtAuthGuard)
   @Post()
   async create(
     @Body() createUserDto: CreateUserDto,
@@ -51,8 +52,12 @@ export class UsersController {
     if (checkUser) {
       return checkUser;
     }
-
-    const user = await this.usersService.create(createUserDto);
+    const organizationId =
+      createUserDto.organizationId || request.user?.organizationId;
+    const user = await this.usersService.create({
+      ...createUserDto,
+      organizationId: organizationId,
+    });
     return user;
   }
 
@@ -87,7 +92,12 @@ export class UsersController {
     };
   }
 
-  @UseGuards(JwtAuthGuard)
+  @Post('/admin/login')
+  async adminLogin(@Body() loginDto: ConnectUserDto): Promise<any> {
+    return await this.usersService.adminLogin(loginDto);
+  }
+
+  @Post('/admin/register')
   @Get(':id')
   async findOne(
     @Param('id') id: string,

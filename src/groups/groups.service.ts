@@ -14,12 +14,25 @@ export class GroupsService {
   ) {}
 
   async create(createGroupDto: CreateGroupDto, request: any): Promise<Group> {
-    const createdGroup = new this.groupModel(createGroupDto);
+    const userId = request.user?.userId;
+    const organizationId = request.user?.organizationId;
+    const members = createGroupDto?.members?.length
+      ? createGroupDto.members
+      : [userId];
+    const createdGroup = new this.groupModel({
+      ...createGroupDto,
+      createdBy: createGroupDto.createdBy || userId,
+      organizationId: createGroupDto.organizationId || organizationId,
+      members,
+    });
     return createdGroup.save();
   }
 
   async findAll(request: any): Promise<Group[]> {
-    return this.groupModel.find().populate('members').exec();
+    const organizationId = request.user?.organizationId;
+    console.log(organizationId, ' organizationId');
+
+    return this.groupModel.find({ organizationId }).populate('members').exec();
   }
 
   async findOne(id: string, request: any): Promise<Group | null> {

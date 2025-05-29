@@ -195,13 +195,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('createGroup')
   async handleCreateGroup(client: Socket, payload: any) {
-    const { name, members, createdBy } = payload;
+    const { name, description, members, createdBy, organizationId } = payload;
 
     const group = await this.groupsService.create(
       {
         name,
+        description,
         members,
         createdBy,
+        organizationId,
       },
       {},
     );
