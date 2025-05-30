@@ -30,8 +30,6 @@ export class GroupsService {
 
   async findAll(request: any): Promise<Group[]> {
     const organizationId = request.user?.organizationId;
-    console.log(organizationId, ' organizationId');
-
     return this.groupModel.find({ organizationId }).populate('members').exec();
   }
 
