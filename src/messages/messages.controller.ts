@@ -27,7 +27,7 @@ import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { UpdateMessageDto } from './dto/update-message.dto';
 
-@Controller('messages')
+@Controller('api/v1/messages')
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 

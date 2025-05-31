@@ -202,12 +202,13 @@ export class UsersService {
     };
   }
 
-  async connect(connectUserDto: ConnectUserDto): Promise<ConnectUserResponse> {
-    const user = await this.userModel
+  async connect(connectUserDto: ConnectUserDto): Promise<any> {
+    const user: any = await this.userModel
       .findOne({
         email: connectUserDto.email,
         password: connectUserDto.password,
       })
+      .populate('organizationId')
       .exec();
     if (!user) {
       throw new NotFoundException('User not found');
@@ -216,13 +217,16 @@ export class UsersService {
     const token = this.authJwtService.generateToken({
       userId: user._id.toString(),
       email: user.email,
-      organizationId: user.organizationId.toString(),
+      organizationId: user.organizationId._id.toString(),
       name: user.name,
     });
 
     return {
       name: user.name,
       token,
+      organization: user.organizationId?.name,
+      email: user.email,
+      userId: user._id.toString(),
     };
   }
 
